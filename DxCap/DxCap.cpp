@@ -29,6 +29,8 @@ int outbuf_size = 0;
 int u_size = 0;
 FILE *f = NULL;
 
+int frames = 0;
+
 
 int main(int argc, char* argv[])
 {
@@ -111,36 +113,32 @@ int main(int argc, char* argv[])
 
 void CALLBACK write_frame_callback(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
 {
-	for (int i = 0; i < 250; ++i)
+	++frames;
+
+	int index = (frames / 25) % 5;
+
+	while (!cap.get_frame_to_buffer(size, buffer))
 	{
+		continue;
+	}
 
-		//AVFrame *m_pYUVFrame = new AVFrame[1];
+	avpicture_fill((AVPicture*)rgb_frame_ptr, (uint8_t*)buffer, PIX_FMT_0RGB32, cap.get_disp_width(), cap.get_disp_height());
 
-		int index = (i / 25) % 5;
+	//将YUV buffer 填充YUV Frame
+	avpicture_fill((AVPicture*)yuv_frame_ptr, (uint8_t*)yuv_buff, PIX_FMT_YUV420P, cap.get_disp_width(), cap.get_disp_height());
 
-		if (!cap.get_frame_to_buffer(size, buffer))
-		{
-			continue;
-		}
+	//将RGB转化为YUV
+	sws_scale(scxt, rgb_frame_ptr->data, rgb_frame_ptr->linesize, 0, c->height, yuv_frame_ptr->data, yuv_frame_ptr->linesize);
 
-		avpicture_fill((AVPicture*)rgb_frame_ptr, (uint8_t*)buffer, PIX_FMT_0RGB32, cap.get_disp_width(), cap.get_disp_height());
-
-		//将YUV buffer 填充YUV Frame
-		avpicture_fill((AVPicture*)yuv_frame_ptr, (uint8_t*)yuv_buff, PIX_FMT_YUV420P, cap.get_disp_width(), cap.get_disp_height());
-
-		//将RGB转化为YUV
-		sws_scale(scxt, rgb_frame_ptr->data, rgb_frame_ptr->linesize, 0, c->height, yuv_frame_ptr->data, yuv_frame_ptr->linesize);
-
-		int got_packet_ptr = 0;
-		av_init_packet(&avpkt);
-		avpkt.data = outbuf;
-		avpkt.size = outbuf_size;
-		u_size = avcodec_encode_video2(c, &avpkt, yuv_frame_ptr, &got_packet_ptr);
-		yuv_frame_ptr->pts++;
-		if (u_size == 0)
-		{
-			fwrite(avpkt.data, 1, avpkt.size, f);
-		}
+	int got_packet_ptr = 0;
+	av_init_packet(&avpkt);
+	avpkt.data = outbuf;
+	avpkt.size = outbuf_size;
+	u_size = avcodec_encode_video2(c, &avpkt, yuv_frame_ptr, &got_packet_ptr);
+	yuv_frame_ptr->pts++;
+	if (u_size == 0)
+	{
+		fwrite(avpkt.data, 1, avpkt.size, f);
 	}
 
 }
