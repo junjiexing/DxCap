@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 	// frames per second 
 	AVRational rate;
 	rate.num = 1;
-	rate.den = 25;
+	rate.den = 10;
 	c->time_base = rate;//(AVRational){1,25};
 	c->gop_size = 10; // emit one intra frame every ten frames 
 	c->max_b_frames = 1;
@@ -99,13 +99,14 @@ int main(int argc, char* argv[])
 	//初始化SwsContext
 	scxt = sws_getContext(c->width, c->height, PIX_FMT_0RGB32, c->width, c->height, PIX_FMT_YUV420P, SWS_POINT, NULL, NULL, NULL);
 
-	MMRESULT id = timeSetEvent(40, 1, &write_frame_callback, NULL, TIME_PERIODIC);
+	MMRESULT id = timeSetEvent(100, 1, &write_frame_callback, NULL, TIME_PERIODIC);
 
 	printf("按任意键结束录像...");
 	flushall();
 	getchar();
 
 	timeKillEvent(id);
+	printf("总帧数：%d\n", frames);
 
 	return 0;
 }
@@ -140,5 +141,4 @@ void CALLBACK write_frame_callback(UINT, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
 	{
 		fwrite(avpkt.data, 1, avpkt.size, f);
 	}
-
 }
